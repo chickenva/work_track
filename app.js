@@ -13,6 +13,8 @@ const moment = require("moment");
 
 const app = express();
 
+app.use(express.static("public"));
+
 // Kết nối Database
 connectDB();
 
@@ -23,12 +25,13 @@ connectDB();
 // 2. Tăng ngày nghỉ cho những user chưa check-in (trừ ngày Chủ Nhật)
 cron.schedule("1 0 * * *", async () => {
   try {
-    console.log("⏰ Running daily maintenance task at", new Date().toLocaleString());
+    console.log(
+      "⏰ Running daily maintenance task at",
+      new Date().toLocaleString(),
+    );
 
     // Lấy ngày hôm qua (định dạng DD/MM/YYYY)
-    const yesterdayDate = moment()
-      .subtract(1, "day")
-      .format("DD/MM/YYYY");
+    const yesterdayDate = moment().subtract(1, "day").format("DD/MM/YYYY");
     const yesterdayMoment = moment().subtract(1, "day");
     const dayOfWeek = yesterdayMoment.day(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
@@ -82,10 +85,7 @@ cron.schedule("1 0 * * *", async () => {
         console.log(`✅ Tăng workingDays cho user ${user.username}`);
       }
       // Nếu chưa check-in hôm qua và hôm qua không phải Chủ Nhật
-      else if (
-        !yesterdayAttendance.checkInTime &&
-        dayOfWeek !== 0
-      ) {
+      else if (!yesterdayAttendance.checkInTime && dayOfWeek !== 0) {
         console.log(
           `📍 User ${user.username} - Thêm 1 ngày nghỉ (không check-in hôm qua)`,
         );
