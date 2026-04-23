@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hệ Thống Chấm Công</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="/css/index.css" />
+  </head>
+  <body>
+    <div class="bmos-header">
+      <div class="bmos-header-left">
+        <h4>WELGUN - HỆ THỐNG CHẤM CÔNG</h4>
+        <p>Xin chào, <strong><%= user.fullName %></strong></p>
+      </div>
+      <div class="bmos-header-right">
+        <div class="time-box" id="live-clock">Đang tải...</div>
+        <button
+          id="btn-checkin-top"
+          class="btn-checkin-top"
+          data-bs-toggle="modal"
+          data-bs-target="#cameraModal"
+        >
+          CHECK-IN
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB CHECK-IN -->
+    <div id="tab-checkin" class="tab-content active">
+      <% 
+      const isCheckedInToday = typeof attendance !== 'undefined' && attendance !== null;
+      // Calculate employee ID: last part of fullName + last 3 digits of phone
+      let employeeId = user.username; // Default to username if phone is not available
+      if (user.phone) {
+        const fullNameParts = user.fullName.split(' ');
+        const lastName = fullNameParts[fullNameParts.length - 1];
+        employeeId = lastName + user.phone.slice(-3);
+      }
+      %>
+
+      <div class="info-row">
+        <div class="info-box">
+          <div class="info-box-label">MÃ NHÂN VIÊN</div>
+          <div class="info-box-value val-highlight"><%= employeeId.toLowerCase() %></div>
+        </div>
+        <div class="info-box">
+          <div class="info-box-label">NGÀY ĐI LÀM</div>
+          <div class="info-box-value val-success"><%= user.workingDays !== undefined ? user.workingDays : 0 %></div>
+        </div>
+        <div class="info-box">
+          <div class="info-box-label">NGÀY NGHỈ</div>
+          <div class="info-box-value val-warning"><%= user.dayOff !== undefined ? user.dayOff : 0 %></div>
+        </div>
+        <div class="info-box">
+          <div class="info-box-label">TRẠNG THÁI</div>
+          <div class="info-box-value" id="status-text">
+            <%= isCheckedInToday ? (attendance && attendance.isCheckedOut ? 'Đã check-out' : 'Đã check-in') : 'Chưa check-in' %>
+          </div>
+        </div>
+      </div>
+
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <button class="nav-btn" onclick="changeMonth(-1)">&#10094;</button>
+          <div class="month-title" id="month-year-display">Tháng ... - ...</div>
+          <button class="nav-btn" onclick="changeMonth(1)">&#10095;</button>
+        </div>
+        <div class="weekdays">
+          <span>T2</span><span>T3</span><span>T4</span><span>T5</span
+          ><span>T6</span><span>T7</span><span>CN</span>
+        </div>
+        <div class="days-grid" id="calendar-grid"></div>
+      </div>
+    </div>
+
+    <!-- TAB BÁO CÁO -->
+    <div id="tab-report" class="tab-content">
+      <div style="padding: 0 15px; margin-bottom: 20px">
+        <!-- NAV TABS TỪ TRONG BÁO CÁO -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px">
+          <button
+            class="report-sub-tab active"
+            onclick="switchReportTab('list', this)"
+          >
+            Danh sách báo cáo
+          </button>
+          <button class="report-sub-tab" onclick="switchReportTab('add', this)">
+            Thêm / Sửa báo cáo
+          </button>
+        </div>
+
+        <!-- DANH SÁCH BÁO CÁO -->
+        <div id="report-list" class="report-sub-content active">
+          <div class="calendar-container">
+            <h5 style="margin-bottom: 20px; color: #2c3e50">
+              DANH SÁCH BÁO CÁO
+            </h5>
+            <table style="width: 100%; border-collapse: collapse; color: #333">
+              <thead style="background-color: #34495e">
+                <tr>
+                  <th
+                    style="
+                      padding: 10px;
+                      text-align: left;
+                      border: 1px solid #bdc3c7;
+                      color: white;
+                    "
+                  >
+                    Ngày
+                  </th>
+                  <th
+                    style="
+                      padding: 10px;
+                      text-align: center;
+                      border: 1px solid #bdc3c7;
+                      color: white;
+                    "
+                  >
+                    Check-in
+                  </th>
+                  <th
+                    style="
+                      padding: 10px;
+                      text-align: center;
+                      border: 1px solid #bdc3c7;
+                      color: white;
+                    "
+                  >
+                    Check-out
+                  </th>
+                  <th
+                    style="
+                      padding: 10px;
+                      text-align: center;
+                      border: 1px solid #bdc3c7;
+                      color: white;
+                    "
+                  >
+                    Trạng thái check-in
+                  </th>
+                  <th
+                    style="
+                      padding: 10px;
+                      text-align: center;
+                      border: 1px solid #bdc3c7;
+                      color: white;
+                    "
+                  >
+                    Chi tiết
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="report-table-body"></tbody>
+            </table>
+            <!-- Pagination -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+              <button onclick="previousReportPage()" style="background-color: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 18px;">←</button>
+              <span id="report-pagination-info" style="font-weight: bold; color: #2c3e50;">Trang 1</span>
+              <button onclick="nextReportPage()" style="background-color: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 18px;">→</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- THÊM BÁO CÁO -->
+        <div id="report-add" class="report-sub-content" style="display: none">
+          <div class="calendar-container">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+              "
+            >
+              <h5 style="margin: 0; color: #2c3e50">
+                BÁO CÁO CÔNG VIỆC NGÀY <span id="today-date">17/04/2026</span>
+              </h5>
+              <button
+                type="button"
+                id="cancel-report-btn"
+                onclick="cancelEditReport()"
+                style="
+                  background-color: #95a5a6;
+                  color: white;
+                  border: none;
+                  padding: 8px 16px;
+                  border-radius: 8px;
+                  font-weight: bold;
+                  cursor: pointer;
+                  font-size: 0.9rem;
+                  display: none;
+                "
+              >
+                HỦY
+              </button>
+            </div>
+            <form
+              id="report-form"
+              style="display: flex; flex-direction: column; gap: 15px"
+            >
+              <div>
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                  "
+                  >Công việc còn lại của ngày hôm trước:</label
+                >
+                <textarea
+                  id="prev-work"
+                  placeholder="Nhập công việc còn lại..."
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #bdc3c7;
+                    border-radius: 5px;
+                    min-height: 80px;
+                  "
+                ></textarea>
+              </div>
+
+              <div>
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                  "
+                  >Công việc thực hiện trong ngày:</label
+                >
+                <textarea
+                  id="today-work"
+                  placeholder="Nhập công việc đã thực hiện..."
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #bdc3c7;
+                    border-radius: 5px;
+                    min-height: 100px;
+                  "
+                ></textarea>
+              </div>
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px"
+              >
+                <div>
+                  <label
+                    style="
+                      display: block;
+                      margin-bottom: 5px;
+                      font-weight: bold;
+                      color: #2c3e50;
+                    "
+                    >Đánh giá mức hoàn thành (%):</label
+                  >
+                  <input
+                    type="number"
+                    id="completion-rate"
+                    min="0"
+                    max="100"
+                    placeholder="0% - 100%"
+                    style="
+                      width: 100%;
+                      padding: 8px;
+                      border: 1px solid #bdc3c7;
+                      border-radius: 5px;
+                    "
+                  />
+                </div>
+                <div>
+                  <label
+                    style="
+                      display: block;
+                      margin-bottom: 5px;
+                      font-weight: bold;
+                      color: #2c3e50;
+                    "
+                    >File/Hình sản phẩm:</label
+                  >
+                  <input
+                    type="file"
+                    id="work-files"
+                    multiple
+                    style="
+                      width: 100%;
+                      padding: 8px;
+                      border: 1px solid #bdc3c7;
+                      border-radius: 5px;
+                    "
+                  />
+                  <small style="color: #7f8c8d; display: block; margin-top: 3px"
+                    >Không bắt buộc</small
+                  >
+                  <!-- FIX: Display existing files -->
+                  <div
+                    id="existing-files-list"
+                    style="
+                      margin-top: 10px;
+                      padding: 10px;
+                      background-color: #ecf0f1;
+                      border-radius: 5px;
+                      display: none;
+                    "
+                  ></div>
+                  <!-- FIX: Hidden field to store existing files data -->
+                  <input
+                    type="hidden"
+                    id="existing-files-data"
+                    value=""
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                  "
+                  >Kế hoạch công việc ngày hôm sau:</label
+                >
+                <textarea
+                  id="next-plan"
+                  placeholder="Nhập kế hoạch cho ngày mai..."
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #bdc3c7;
+                    border-radius: 5px;
+                    min-height: 100px;
+                  "
+                ></textarea>
+              </div>
+
+              <div>
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                  "
+                  >Đề xuất:</label
+                >
+                <textarea
+                  id="suggestion"
+                  placeholder="Nhập đề xuất..."
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #bdc3c7;
+                    border-radius: 5px;
+                    min-height: 80px;
+                  "
+                ></textarea>
+              </div>
+
+              <div>
+                <label
+                  style="
+                    display: block;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                    color: #2c3e50;
+                  "
+                  >Ghi chú:</label
+                >
+                <textarea
+                  id="notes"
+                  placeholder="Nhập ghi chú..."
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #bdc3c7;
+                    border-radius: 5px;
+                    min-height: 80px;
+                  "
+                ></textarea>
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 20px">
+                <button
+                  type="button"
+                  id="submit-report-btn"
+                  onclick="submitReport()"
+                  style="
+                    background-color: #27ae60;
+                    color: white;
+                    border: none;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    flex: 1;
+                  "
+                >
+                  GỬI BÁO CÁO
+                </button>
+              </div>
+              <input type="hidden" id="editing-report-id" value="" />
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CHECK-OUT -->
+    <div id="tab-checkout" class="tab-content">
+      <% const isCheckedOutToday = typeof attendance !== 'undefined' && attendance !==
+      null && attendance.isCheckedOut; %>
+
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <button class="nav-btn" onclick="changeCheckoutMonth(-1)">
+            &#10094;
+          </button>
+          <div class="month-title" id="month-year-checkout-display">
+            Tháng ... - ...
+          </div>
+          <button class="nav-btn" onclick="changeCheckoutMonth(1)">
+            &#10095;
+          </button>
+        </div>
+        <div class="weekdays">
+          <span>T2</span><span>T3</span><span>T4</span><span>T5</span
+          ><span>T6</span><span>T7</span><span>CN</span>
+        </div>
+        <div class="days-grid" id="checkout-calendar-grid"></div>
+      </div>
+
+      <div style="text-align: center; padding: 30px">
+        <button
+          id="btn-checkout"
+          class="btn-checkin-top"
+          style="padding: 12px 40px; font-size: 1.1rem"
+          data-bs-toggle="modal"
+          data-bs-target="#checkoutCameraModal"
+        >
+          CHECK-OUT
+        </button>
+      </div>
+
+      <div
+        id="checkout-status"
+        style="
+          margin-top: 20px;
+          padding: 15px;
+          background-color: #ecf0f1;
+          border-radius: 8px;
+          display: none;
+          margin-left: 15px;
+          margin-right: 15px;
+        "
+      >
+        <p
+          style="color: #27ae60; font-weight: bold; text-align: center"
+          id="checkout-message"
+        ></p>
+      </div>
+    </div>
+
+    <!-- Modal xem ảnh chi tiết -->
+    <div
+      class="modal fade"
+      id="imageViewerModal"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title" id="viewer-time">Chi tiết chấm công</h6>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body text-center p-0">
+            <img
+              id="viewer-img"
+              src=""
+              style="width: 100%; border-radius: 0 0 5px 5px"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal chụp ảnh check-in -->
+    <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Chụp ảnh check-in</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body text-center">
+            <video id="camera-stream" autoplay playsinline></video>
+            <canvas id="snapshot" style="display: none"></canvas>
+            <button
+              id="btn-capture"
+              class="btn btn-primary w-100 mt-3 py-2 fw-bold"
+            >
+              CHỤP & GỬI
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal chụp ảnh check-out -->
+    <div class="modal fade" id="checkoutCameraModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Chụp ảnh check-out</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        
+        <video 
+            id="checkout-camera-stream" 
+            class="w-100 rounded" 
+            style="transform: scaleX(-1); object-fit: cover;" 
+            autoplay playsinline>
+        </video>
+        
+        <canvas id="checkout-snapshot" style="display: none"></canvas>
+        <button id="btn-checkout-capture" class="btn btn-primary w-100 mt-3 py-2 fw-bold">
+          CHỤP & GỬI
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav">
+      <button class="nav-item active" onclick="switchTab('checkin', this)">
+        <span>CHECK-IN</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('report', this)">
+        <span>BÁO CÁO</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('checkout', this)">
+        <span>CHECK-OUT</span>
+      </button>
+    </div>
+
+    <script>
+      // Expose data to global scope for index.js
+      window.checkinData = <%- checkinData %>;
+      window.checkoutData = <%- checkoutData %>;
+      window.isCheckedInToday = <%= typeof attendance !== 'undefined' && attendance !== null %>;
+      window.isCheckedOutToday = <%= typeof attendance !== 'undefined' && attendance !== null && attendance.isCheckedOut %>;
+    </script>
+    <script src="/js/index.js"></script>
+  </body>
+</html>
