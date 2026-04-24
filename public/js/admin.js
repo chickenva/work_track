@@ -543,7 +543,8 @@ function loadEmployeeReports(employeeId) {
     .then((data) => {
       if (data.success) {
         const reports = data.data;
-        let html = `<table class="employee-table" style="width: 100%; border-collapse: collapse; color: #333">
+        let html = `<div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px;">
+          <table class="employee-table" style="width: 100%; border-collapse: collapse; color: #333; min-width: 600px">
                 <thead style="background-color: #34495e">
                   <tr>
                     <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7; color: white;">Ngày</th>
@@ -578,7 +579,7 @@ function loadEmployeeReports(employeeId) {
           });
         }
 
-        html += `</tbody></table>`;
+        html += `</tbody></table></div>`;
         document.getElementById("reportsContainer").innerHTML = html;
       }
     })

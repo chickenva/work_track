@@ -33,6 +33,15 @@ body {
   gap: 20px;
   align-items: center;
 }
+.time-box {
+  border: 1px solid #ddd;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 1rem;
+  background: #f9f9f9;
+  color: #333;
+}
 .logout-btn {
   background-color: #e74c3c;
   color: white;
@@ -408,53 +417,58 @@ body {
   .admin-container {
     padding: 15px;
   }
-  
+
   .header {
     flex-direction: column;
     gap: 15px;
     padding: 15px;
   }
-  
+
   .header h1 {
     font-size: 24px;
     width: 100%;
   }
-  
+
   .header-right {
     width: 100%;
     justify-content: space-between;
     gap: 15px;
   }
-  
+
+  .time-box {
+    font-size: 0.9rem;
+    padding: 6px 12px;
+  }
+
   .tabs-nav {
     overflow-x: auto;
     flex-wrap: wrap;
   }
-  
+
   .tab-button {
     flex: 0 0 auto;
     padding: 12px;
     font-size: 13px;
   }
-  
+
   .tab-content {
     padding: 20px;
   }
-  
+
   .form-grid {
     grid-template-columns: 1fr;
     gap: 15px;
   }
-  
+
   .employee-table {
     font-size: 13px;
   }
-  
+
   .employee-table th,
   .employee-table td {
     padding: 12px;
   }
-  
+
   .btn-action {
     padding: 5px 10px;
     font-size: 12px;
@@ -466,17 +480,17 @@ body {
   * {
     box-sizing: border-box;
   }
-  
+
   body {
     background-color: #f5f5f5;
   }
-  
+
   .admin-container {
     max-width: 100%;
     padding: 10px;
     margin: 0;
   }
-  
+
   .header {
     flex-direction: column;
     padding: 12px;
@@ -484,42 +498,49 @@ body {
     gap: 12px;
     border-radius: 8px;
   }
-  
+
   .header h1 {
     font-size: 18px;
     width: 100%;
     text-align: center;
   }
-  
+
   .header-right {
     width: 100%;
     flex-direction: column;
     gap: 10px;
     align-items: stretch;
   }
-  
+
   .header-right span {
     text-align: center;
     font-size: 13px;
   }
-  
+
+  .time-box {
+    flex: 0.5;
+    font-size: 0.75rem;
+    padding: 5px 8px;
+    text-align: center;
+  }
+
   .logout-btn {
     width: 100%;
     padding: 10px 15px;
     font-size: 13px;
   }
-  
+
   .tabs-container {
     margin-bottom: 15px;
     border-radius: 8px;
   }
-  
+
   .tabs-nav {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-bottom: 2px solid #ecf0f1;
   }
-  
+
   .tab-button {
     flex: 0 0 auto;
     padding: 12px 15px;
@@ -528,16 +549,16 @@ body {
     color: #7f8c8d;
     white-space: nowrap;
   }
-  
+
   .tab-button.active {
     border-bottom: 3px solid #3498db;
     margin-bottom: -2px;
   }
-  
+
   .tab-content {
     padding: 15px;
   }
-  
+
   /* TABLE WRAPPER UNTUK SCROLL */
   .table-wrapper {
     overflow-x: auto;
@@ -546,93 +567,93 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
-  
+
   .employee-table {
     font-size: 12px;
     min-width: 600px;
   }
-  
+
   .employee-table th {
     padding: 10px 8px;
     font-size: 11px;
     text-transform: uppercase;
   }
-  
+
   .employee-table td {
     padding: 10px 8px;
     font-size: 12px;
   }
-  
+
   .search-box {
     margin-bottom: 15px;
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .search-box input {
     padding: 8px 12px;
     font-size: 13px;
   }
-  
+
   .action-buttons {
     gap: 5px;
     flex-wrap: wrap;
   }
-  
+
   .btn-action {
     padding: 5px 8px;
     font-size: 11px;
     flex: 0 1 auto;
   }
-  
+
   .status-badge {
     padding: 4px 8px;
     font-size: 10px;
   }
-  
+
   /* FORM STYLING */
   .form-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 15px;
   }
-  
+
   .form-row {
     flex-direction: column;
     gap: 0;
   }
-  
+
   .form-row .form-group {
     flex: 1;
     margin-bottom: 15px;
   }
-  
+
   .form-group {
     margin-bottom: 15px;
   }
-  
+
   .form-group label {
     font-size: 12px;
     margin-bottom: 6px;
   }
-  
+
   .form-group input,
   .form-group select,
   .form-group textarea {
     padding: 8px;
     font-size: 13px;
   }
-  
+
   .form-group textarea {
     min-height: 80px;
   }
-  
+
   .button-group {
     flex-direction: column;
     gap: 8px;
     margin-top: 15px;
   }
-  
+
   .btn-submit,
   .btn-cancel {
     width: 100%;
@@ -640,12 +661,12 @@ body {
     font-size: 13px;
     min-width: auto;
   }
-  
+
   /* MODAL */
   .modal-overlay {
     padding: 10px;
   }
-  
+
   .modal-content {
     padding: 15px;
     border-radius: 8px;
@@ -653,44 +674,44 @@ body {
     width: 100%;
     max-height: 90vh;
   }
-  
+
   .modal-header {
     font-size: 16px;
     margin-bottom: 15px;
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .close-modal {
     font-size: 24px;
     align-self: flex-end;
   }
-  
+
   .detail-info {
     padding: 12px;
     margin-bottom: 12px;
   }
-  
+
   .detail-row {
     flex-direction: column;
     gap: 5px;
     padding: 8px 0;
   }
-  
+
   .detail-label {
     font-size: 12px;
   }
-  
+
   .detail-value {
     font-size: 12px;
   }
-  
+
   /* CALENDAR STYLE */
   .day-circle {
     width: 40px;
     height: 40px;
   }
-  
+
   .day-num {
     font-size: 0.7rem;
   }
@@ -701,78 +722,83 @@ body {
   .admin-container {
     padding: 8px;
   }
-  
+
   .header {
     padding: 10px;
   }
-  
+
   .header h1 {
     font-size: 16px;
   }
-  
+
   .header-right span {
     font-size: 12px;
   }
-  
+
+  .time-box {
+    font-size: 0.7rem;
+    padding: 4px 6px;
+  }
+
   .logout-btn {
     font-size: 12px;
     padding: 8px 12px;
   }
-  
+
   .tab-button {
     padding: 10px 12px;
     font-size: 11px;
   }
-  
+
   .tab-content {
     padding: 12px;
   }
-  
+
   .employee-table {
     font-size: 11px;
     min-width: 500px;
   }
-  
+
   .employee-table th {
     padding: 8px 6px;
     font-size: 10px;
   }
-  
+
   .employee-table td {
     padding: 8px 6px;
   }
-  
+
   .search-box input {
     padding: 8px 10px;
     font-size: 12px;
   }
-  
+
   .btn-action {
     padding: 4px 6px;
     font-size: 10px;
   }
-  
+
   .form-group input,
   .form-group select,
   .form-group textarea {
     padding: 6px;
     font-size: 12px;
   }
-  
+
   .btn-submit,
   .btn-cancel {
     padding: 8px 12px;
     font-size: 12px;
   }
-  
+
   .modal-content {
     padding: 12px;
   }
-  
+
   .modal-header {
     font-size: 14px;
   }
-  
+
   .close-modal {
     font-size: 20px;
   }
