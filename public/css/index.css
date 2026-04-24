@@ -290,3 +290,229 @@ body {
 .report-sub-content.active {
   display: block;
 }
+
+/* ========== RESPONSIVE MOBILE ========== */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .info-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 0 10px 15px;
+  }
+  
+  .info-box-label {
+    font-size: 0.6rem;
+  }
+  
+  .info-box-value {
+    font-size: 0.95rem;
+  }
+  
+  .bmos-header {
+    padding: 12px 15px;
+  }
+  
+  .bmos-header-left h4 {
+    font-size: 1rem;
+  }
+  
+  .bmos-header-right {
+    gap: 8px;
+  }
+  
+  .time-box {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
+  
+  .btn-checkin-top {
+    padding: 6px 15px;
+    font-size: 0.85rem;
+  }
+  
+  .calendar-container {
+    margin: 0 10px;
+    padding: 15px 10px;
+  }
+  
+  .day-circle {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+  
+  .month-title {
+    font-size: 1rem;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 100px;
+    background-color: #f5f5f5;
+  }
+  
+  .bmos-header {
+    flex-direction: column;
+    padding: 10px 12px;
+    gap: 12px;
+    border-radius: 0;
+    margin-bottom: 15px;
+  }
+  
+  .bmos-header-left h4 {
+    font-size: 0.95rem;
+  }
+  
+  .bmos-header-left p {
+    font-size: 0.75rem;
+  }
+  
+  .bmos-header-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  
+  .time-box {
+    flex: 1;
+    font-size: 0.75rem;
+    padding: 5px 8px;
+    text-align: center;
+  }
+  
+  .btn-checkin-top {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+  
+  .info-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: 0 10px 15px;
+  }
+  
+  .info-box {
+    padding: 10px 5px;
+    border-radius: 8px;
+  }
+  
+  .info-box-label {
+    font-size: 0.55rem;
+    margin-bottom: 4px;
+  }
+  
+  .info-box-value {
+    font-size: 0.85rem;
+  }
+  
+  .calendar-container {
+    margin: 0 8px;
+    padding: 12px 8px;
+    border-radius: 15px;
+  }
+  
+  .calendar-header {
+    margin-bottom: 10px;
+  }
+  
+  .month-title {
+    font-size: 0.9rem;
+  }
+  
+  .nav-btn {
+    font-size: 1rem;
+    padding: 0 8px;
+  }
+  
+  .weekdays {
+    font-size: 0.7rem;
+    margin-bottom: 8px;
+  }
+  
+  .days-grid {
+    gap: 12px 4px;
+  }
+  
+  .day-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .day-num {
+    font-size: 0.7rem;
+    margin-top: 4px;
+  }
+  
+  .report-sub-tab {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    margin-right: 5px;
+  }
+  
+  .modal-content {
+    border-radius: 10px;
+  }
+  
+  .modal-title {
+    font-size: 1rem;
+  }
+  
+  #camera-stream {
+    border-radius: 8px;
+  }
+  
+  /* Bottom Navigation */
+  .bottom-nav {
+    height: 65px;
+  }
+  
+  .nav-item {
+    font-size: 0.7rem;
+  }
+  
+  .nav-icon {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+}
+
+/* Extra Small Mobile (< 480px) */
+@media (max-width: 480px) {
+  .info-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .info-box {
+    padding: 8px 5px;
+  }
+  
+  .info-box-value {
+    font-size: 0.8rem;
+  }
+  
+  .day-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  .day-num {
+    font-size: 0.65rem;
+  }
+  
+  .weekdays {
+    font-size: 0.65rem;
+  }
+  
+  .report-sub-tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}

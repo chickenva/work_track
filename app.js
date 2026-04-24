@@ -9,7 +9,10 @@ const User = require("./models/User");
 const { requireAuth } = require("./middlewares/auth");
 const Report = require("./models/Report");
 const Attendance = require("./models/Attendance");
-const moment = require("moment");
+const moment = require("moment-timezone");
+
+// Set default timezone
+moment.tz.setDefault("Asia/Ho_Chi_Minh");
 
 const app = express();
 
@@ -65,11 +68,11 @@ cron.schedule("1 0 * * *", async () => {
         !yesterdayAttendance.isCheckedOut
       ) {
         console.log(
-          `🚀 Auto-checkout cho user ${user.username} vào lúc ${new Date().toLocaleTimeString()}`,
+          `🚀 Auto-checkout cho user ${user.username} vào lúc ${moment.tz("Asia/Ho_Chi_Minh").toDate().toLocaleTimeString()}`,
         );
 
         // Auto-checkout: Set checkout time = end of yesterday (23:59:59)
-        const checkOutTime = moment(yesterdayDate, "DD/MM/YYYY")
+        const checkOutTime = moment.tz(yesterdayDate, "DD/MM/YYYY", "Asia/Ho_Chi_Minh")
           .endOf("day")
           .toDate();
 
@@ -128,7 +131,7 @@ app.post("/login", async (req, res) => {
   }
 
   // Update last active date
-  user.lastActiveDate = new Date();
+  user.lastActiveDate = moment.tz("Asia/Ho_Chi_Minh").toDate();
   await user.save();
 
   const token = jwt.sign(
@@ -187,14 +190,14 @@ const renderDashboard = async (req, res) => {
     if (a.selfie) {
       checkinMap[a.date] = {
         selfie: a.selfie,
-        time: moment(a.checkInTime).format("HH:mm A"),
+        time: moment.tz(a.checkInTime, "Asia/Ho_Chi_Minh").format("HH:mm A"),
         status: a.status,
       };
     }
     if (a.checkOutSelfie) {
       checkoutMap[a.date] = {
         checkOutSelfie: a.checkOutSelfie,
-        time: moment(a.checkOutTime).format("HH:mm A"),
+        time: moment.tz(a.checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm A"),
       };
     }
   });
@@ -247,7 +250,6 @@ app.get("/admin/:id", requireAuth, async (req, res) => {
 // API Check-in
 app.post("/checkin", requireAuth, async (req, res) => {
   try {
-    const moment = require("moment");
     // ÉP CHUẨN ĐỊNH DẠNG DD/MM/YYYY
     const todayStr = moment().format("DD/MM/YYYY");
 
@@ -262,7 +264,7 @@ app.post("/checkin", requireAuth, async (req, res) => {
     await Attendance.create({
       userId: req.user.userId,
       date: todayStr,
-      checkInTime: new Date(),
+      checkInTime: moment.tz("Asia/Ho_Chi_Minh").toDate(),
       selfie: req.body.imageBase64,
       status: "checked-in",
     });
@@ -294,7 +296,7 @@ app.post("/checkout", requireAuth, async (req, res) => {
     const attendance = await Attendance.findOneAndUpdate(
       { userId: req.user.userId, date: date },
       {
-        checkOutTime: new Date(),
+        checkOutTime: moment.tz("Asia/Ho_Chi_Minh").toDate(),
         checkOutSelfie: imageBase64,
         isCheckedOut: true,
         status: "completed",
@@ -344,13 +346,13 @@ app.post("/increment-day-off", requireAuth, async (req, res) => {
 function calculateCheckInStatus(checkInTime) {
   if (!checkInTime) return "--:--";
 
-  const inTime = moment(checkInTime);
+  const inTime = moment.tz(checkInTime, "Asia/Ho_Chi_Minh");
 
   // Define time boundaries
-  const onTimeStart = moment(inTime)
+  const onTimeStart = moment.tz(inTime, "Asia/Ho_Chi_Minh")
     .clone()
     .set({ hour: 8, minute: 0, second: 0 }); // 8:00 AM
-  const onTimeEnd = moment(inTime)
+  const onTimeEnd = moment.tz(inTime, "Asia/Ho_Chi_Minh")
     .clone()
     .set({ hour: 8, minute: 30, second: 0 }); // 8:30 AM
 
@@ -392,13 +394,12 @@ function formatTimeDifference(seconds, label) {
 
 function calculateCheckOutStatus(checkInTime, checkOutTime) {
   if (!checkOutTime) return "Chưa checkout";
-  return moment(checkOutTime).format("HH:mm");
+  return moment.tz(checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm");
 }
 
 // API Lấy danh sách báo cáo
 app.get("/reports", requireAuth, async (req, res) => {
   try {
-    const moment = require("moment");
     // Tìm toàn bộ báo cáo của user này
     const reports = await Report.find({ userId: req.user.userId }).sort({
       createdAt: -1,
@@ -422,8 +423,8 @@ app.get("/reports", requireAuth, async (req, res) => {
       const attendance = attendanceMap[r.date];
       let totalHours = 0;
       if (attendance && attendance.checkInTime && attendance.checkOutTime) {
-        const inTime = moment(attendance.checkInTime);
-        const outTime = moment(attendance.checkOutTime);
+        const inTime = moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh");
+        const outTime = moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh");
         const duration = moment.duration(outTime.diff(inTime));
         totalHours = duration.asHours().toFixed(1);
       }
@@ -432,11 +433,11 @@ app.get("/reports", requireAuth, async (req, res) => {
         date: r.date,
         checkInTime:
           attendance && attendance.checkInTime
-            ? moment(attendance.checkInTime).format("HH:mm")
+            ? moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh").format("HH:mm")
             : "--:--",
         checkOutTime:
           attendance && attendance.checkOutTime
-            ? moment(attendance.checkOutTime).format("HH:mm")
+            ? moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm")
             : "--:--",
         checkInStatus: attendance
           ? calculateCheckInStatus(attendance.checkInTime)
@@ -490,7 +491,6 @@ app.get("/report-detail", requireAuth, async (req, res) => {
 // API Thêm báo cáo
 app.post("/report", requireAuth, async (req, res) => {
   try {
-    const moment = require("moment");
     // ÉP CHUẨN ĐỊNH DẠNG DD/MM/YYYY (Phải giống hệt lúc checkin)
     const todayStr = moment().format("DD/MM/YYYY");
 
@@ -547,7 +547,6 @@ app.post("/report", requireAuth, async (req, res) => {
 // API Cập nhật báo cáo
 app.put("/report-detail", requireAuth, async (req, res) => {
   try {
-    const moment = require("moment");
     const reportDate = req.query.date;
 
     const report = await Report.findOne({
@@ -560,8 +559,8 @@ app.put("/report-detail", requireAuth, async (req, res) => {
         .json({ success: false, message: "Không tìm thấy báo cáo!" });
 
     // Chuyển về cùng mốc 0h để so sánh ngày
-    const isPastDay = moment(reportDate, ["YYYY-MM-DD", "DD/MM/YYYY"]).isBefore(
-      moment().startOf("day"),
+    const isPastDay = moment.tz(reportDate, ["YYYY-MM-DD", "DD/MM/YYYY"], "Asia/Ho_Chi_Minh").isBefore(
+      moment.tz("Asia/Ho_Chi_Minh").startOf("day"),
     );
 
     if (isPastDay) {
@@ -877,11 +876,11 @@ app.get("/api/employee/:id/reports", async (req, res) => {
         date: r.date,
         checkInTime:
           attendance && attendance.checkInTime
-            ? moment(attendance.checkInTime).format("HH:mm")
+            ? moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh").format("HH:mm")
             : "--:--",
         checkOutTime:
           attendance && attendance.checkOutTime
-            ? moment(attendance.checkOutTime).format("HH:mm")
+            ? moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm")
             : "--:--",
         checkInStatus: attendance
           ? calculateCheckInStatus(attendance.checkInTime)
@@ -894,8 +893,8 @@ app.get("/api/employee/:id/reports", async (req, res) => {
           : "--:--",
         totalHours:
           attendance && attendance.checkOutTime && attendance.checkInTime
-            ? moment(attendance.checkOutTime)
-                .diff(moment(attendance.checkInTime), "hours", true)
+            ? moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
+                .diff(moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh"), "hours", true)
                 .toFixed(1)
             : 0,
       };
@@ -913,7 +912,6 @@ app.get(
   requireAuth,
   async (req, res) => {
     try {
-      const moment = require("moment");
       const attendances = await Attendance.find({
         userId: req.params.employeeId,
       });
@@ -930,7 +928,7 @@ app.get(
           checkinData[dateKey] = {
             selfie: a.selfie,
             time: a.checkInTime
-              ? moment(a.checkInTime).format("HH:mm")
+              ? moment.tz(a.checkInTime, "Asia/Ho_Chi_Minh").format("HH:mm")
               : "--:--",
           };
         }
@@ -939,7 +937,7 @@ app.get(
           checkoutData[dateKey] = {
             checkOutSelfie: a.checkOutSelfie,
             time: a.checkOutTime
-              ? moment(a.checkOutTime).format("HH:mm")
+              ? moment.tz(a.checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm")
               : "--:--",
           };
         }
@@ -994,8 +992,8 @@ app.get("/api/employee/:id/report", async (req, res) => {
 
     let totalHours = 0;
     if (attendance && attendance.checkInTime && attendance.checkOutTime) {
-      totalHours = moment(attendance.checkOutTime)
-        .diff(moment(attendance.checkInTime), "hours", true)
+      totalHours = moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
+        .diff(moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh"), "hours", true)
         .toFixed(1);
     }
 

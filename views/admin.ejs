@@ -48,26 +48,28 @@
               onkeyup="filterEmployees()"
             />
           </div>
-          <table class="employee-table" id="employeeTable">
-            <thead>
-              <tr>
-                <th>Mã Nhân Viên</th>
-                <th>Họ và Tên</th>
-                <th>Vị Trí</th>
-                <th>Số Ngày Làm</th>
-                <th>Số Ngày Nghỉ</th>
-                <th>Trạng Thái</th>
-                <th>Hành Động</th>
-              </tr>
-            </thead>
-            <tbody id="employeeTableBody">
-              <tr>
-                <td colspan="7" class="text-center py-5">
-                  <span style="color: #7f8c8d">Đang tải dữ liệu...</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-wrapper">
+            <table class="employee-table" id="employeeTable">
+              <thead>
+                <tr>
+                  <th>Mã Nhân Viên</th>
+                  <th>Họ và Tên</th>
+                  <th>Vị Trí</th>
+                  <th>Số Ngày Làm</th>
+                  <th>Số Ngày Nghỉ</th>
+                  <th>Trạng Thái</th>
+                  <th>Hành Động</th>
+                </tr>
+              </thead>
+              <tbody id="employeeTableBody">
+                <tr>
+                  <td colspan="7" class="text-center py-5">
+                    <span style="color: #7f8c8d">Đang tải dữ liệu...</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- Tab: Thêm / Sửa Nhân Viên -->

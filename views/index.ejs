@@ -100,63 +100,65 @@
             <h5 style="margin-bottom: 20px; color: #2c3e50">
               DANH SÁCH BÁO CÁO
             </h5>
-            <table style="width: 100%; border-collapse: collapse; color: #333">
-              <thead style="background-color: #34495e">
-                <tr>
-                  <th
-                    style="
-                      padding: 10px;
-                      text-align: left;
-                      border: 1px solid #bdc3c7;
-                      color: white;
-                    "
-                  >
-                    Ngày
-                  </th>
-                  <th
-                    style="
-                      padding: 10px;
-                      text-align: center;
-                      border: 1px solid #bdc3c7;
-                      color: white;
-                    "
-                  >
-                    Check-in
-                  </th>
-                  <th
-                    style="
-                      padding: 10px;
-                      text-align: center;
-                      border: 1px solid #bdc3c7;
-                      color: white;
-                    "
-                  >
-                    Check-out
-                  </th>
-                  <th
-                    style="
-                      padding: 10px;
-                      text-align: center;
-                      border: 1px solid #bdc3c7;
-                      color: white;
-                    "
-                  >
-                    Trạng thái check-in
-                  </th>
-                  <th
-                    style="
-                      padding: 10px;
-                      text-align: center;
-                      border: 1px solid #bdc3c7;
-                      color: white;
-                    "
-                  >
-                    Chi tiết
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="report-table-body"></tbody>
-            </table>
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px;">
+              <table style="width: 100%; border-collapse: collapse; color: #333; min-width: 600px">
+                <thead style="background-color: #34495e">
+                  <tr>
+                    <th
+                      style="
+                        padding: 10px;
+                        text-align: left;
+                        border: 1px solid #bdc3c7;
+                        color: white;
+                      "
+                    >
+                      Ngày
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        text-align: center;
+                        border: 1px solid #bdc3c7;
+                        color: white;
+                      "
+                    >
+                      Check-in
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        text-align: center;
+                        border: 1px solid #bdc3c7;
+                        color: white;
+                      "
+                    >
+                      Check-out
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        text-align: center;
+                        border: 1px solid #bdc3c7;
+                        color: white;
+                      "
+                    >
+                      Trạng thái check-in
+                    </th>
+                    <th
+                      style="
+                        padding: 10px;
+                        text-align: center;
+                        border: 1px solid #bdc3c7;
+                        color: white;
+                      "
+                    >
+                      Chi tiết
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="report-table-body"></tbody>
+              </table>
+            </div>
             <!-- Pagination -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
               <button onclick="previousReportPage()" style="background-color: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 18px;">←</button>
