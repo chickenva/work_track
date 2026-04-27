@@ -21,6 +21,38 @@ app.use(express.static("public"));
 // Kết nối Database
 connectDB();
 
+// =============================== BOT THÔNG BÁO TELEGRAM ===============================
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN; // Token từ BotFather
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID; // ID của group Welgun
+
+// Hàm gửi tin nhắn Telegram
+async function sendTelegramMessage(message, reportId = null) {
+  const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
+  const loginUrl = `${process.env.BASE_URL}/login`;
+
+  // Cấu hình nội dung cơ bản
+  let payload = {
+    chat_id: process.env.TELEGRAM_CHAT_ID,
+    text: message,
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "👉 Mở hệ thống quản trị 🌐", url: loginUrl }],
+      ],
+    },
+  };
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error("Lỗi khi gửi thông báo Telegram:", error);
+  }
+}
+
 // =============================== SCHEDULED TASKS ===============================
 
 // Scheduled task chạy mỗi ngày lúc 00:01 để:
@@ -33,16 +65,39 @@ cron.schedule("1 0 * * *", async () => {
       new Date().toLocaleString(),
     );
 
-    // Lấy ngày hôm qua (định dạng DD/MM/YYYY)
-    const yesterdayDate = moment().subtract(1, "day").format("DD/MM/YYYY");
-    const yesterdayMoment = moment().subtract(1, "day");
+    // Lấy ngày hôm qua (định dạng DD/MM/YYYY) - theo timezone Asia/Ho_Chi_Minh
+    const yesterdayMoment = moment.tz("Asia/Ho_Chi_Minh").subtract(1, "day");
+    const yesterdayDate = yesterdayMoment.format("DD/MM/YYYY");
     const dayOfWeek = yesterdayMoment.day(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+    // Tính start/end of yesterday (dùng để kiểm tra createdAt của user)
+    const yesterdayStart = yesterdayMoment.clone().startOf("day").toDate();
+    const yesterdayEnd = yesterdayMoment.clone().endOf("day").toDate();
 
     // Lấy tất cả users
     const allUsers = await User.find({});
 
     for (const user of allUsers) {
-      // Lấy attendance record của hôm qua
+      // Kiểm tra xem user có bắt đầu làm trước hôm qua không
+      // startDate phải <= yesterdayDate
+      if (!user.startDate) {
+        console.log(`⚠️ User ${user.username} không có startDate, bỏ qua`);
+        continue;
+      }
+
+      const startDateMoment = moment(user.startDate, "DD/MM/YYYY").tz(
+        "Asia/Ho_Chi_Minh",
+      );
+
+      if (startDateMoment.isAfter(yesterdayMoment)) {
+        // User bắt đầu làm sau hôm qua, bỏ qua
+        console.log(
+          `⏭️ User ${user.username} bắt đầu làm từ ${user.startDate}, bỏ qua xử lý`,
+        );
+        continue;
+      }
+
+      // Lấy attendance record của hôm qua - Query bằng date string
       const yesterdayAttendance = await Attendance.findOne({
         userId: user._id,
         date: yesterdayDate,
@@ -71,10 +126,12 @@ cron.schedule("1 0 * * *", async () => {
           `🚀 Auto-checkout cho user ${user.username} vào lúc ${moment.tz("Asia/Ho_Chi_Minh").toDate().toLocaleTimeString()}`,
         );
 
-        // Auto-checkout: Set checkout time = end of yesterday (23:59:59)
-        const checkOutTime = moment.tz(yesterdayDate, "DD/MM/YYYY", "Asia/Ho_Chi_Minh")
-          .endOf("day")
-          .toDate();
+        // Auto-checkout: Set checkout time = end of yesterday (23:59:59 Asia/Ho_Chi_Minh)
+        const checkOutTime = yesterdayMoment.clone().endOf("day").toDate();
+
+        console.log(
+          `   Checkout time: ${checkOutTime.toISOString()} (${moment.tz(checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm:ss")} Ho Chi Minh)`,
+        );
 
         await Attendance.findByIdAndUpdate(yesterdayAttendance._id, {
           checkOutTime: checkOutTime,
@@ -103,6 +160,16 @@ cron.schedule("1 0 * * *", async () => {
 });
 
 // =============================== END SCHEDULED TASKS ===============================
+
+// API Lấy thời gian hiện tại của server (Asia/Ho_Chi_Minh)
+app.get("/api/current-time", (req, res) => {
+  const now = moment.tz("Asia/Ho_Chi_Minh");
+  res.json({
+    timestamp: now.toDate().getTime(), // Milliseconds since epoch
+    iso: now.toISOString(),
+    formatted: now.format("HH:mm:ss DD/MM/YYYY"),
+  });
+});
 
 // Middleware
 app.use(express.json({ limit: "50mb" })); // Tăng limit để nhận ảnh Base64
@@ -281,6 +348,30 @@ app.post("/checkin", requireAuth, async (req, res) => {
       });
     }
 
+    // 🟢 BẮT ĐẦU GẮN THÔNG BÁO CHECK-IN
+    try {
+      // Lấy giờ Việt Nam hiện tại
+      const timeNow = new Date().toLocaleTimeString("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Soạn tin nhắn (Thay report.date thành todayStr)
+      const msgCheckIn = `
+🟢 <b>THÔNG BÁO CHECK-IN</b>
+👤 Nhân viên: <b>${req.user.fullName || req.user.username || "Chưa rõ tên"}</b>
+⏰ Thời gian: <b>${timeNow}</b>
+📅 Ngày: <b>${todayStr}</b>
+    `;
+
+      // Gọi hàm gửi
+      sendTelegramMessage(msgCheckIn);
+    } catch (error) {
+      console.error("Lỗi gửi Tele Check-in:", error);
+    }
+    // 🟢 KẾT THÚC GẮN THÔNG BÁO
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -316,7 +407,6 @@ app.post("/checkout", requireAuth, async (req, res) => {
       { $inc: { workingDays: 1 } },
       { new: true },
     );
-
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -349,10 +439,12 @@ function calculateCheckInStatus(checkInTime) {
   const inTime = moment.tz(checkInTime, "Asia/Ho_Chi_Minh");
 
   // Define time boundaries
-  const onTimeStart = moment.tz(inTime, "Asia/Ho_Chi_Minh")
+  const onTimeStart = moment
+    .tz(inTime, "Asia/Ho_Chi_Minh")
     .clone()
     .set({ hour: 8, minute: 0, second: 0 }); // 8:00 AM
-  const onTimeEnd = moment.tz(inTime, "Asia/Ho_Chi_Minh")
+  const onTimeEnd = moment
+    .tz(inTime, "Asia/Ho_Chi_Minh")
     .clone()
     .set({ hour: 8, minute: 30, second: 0 }); // 8:30 AM
 
@@ -433,11 +525,15 @@ app.get("/reports", requireAuth, async (req, res) => {
         date: r.date,
         checkInTime:
           attendance && attendance.checkInTime
-            ? moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh").format("HH:mm")
+            ? moment
+                .tz(attendance.checkInTime, "Asia/Ho_Chi_Minh")
+                .format("HH:mm")
             : "--:--",
         checkOutTime:
           attendance && attendance.checkOutTime
-            ? moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm")
+            ? moment
+                .tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
+                .format("HH:mm")
             : "--:--",
         checkInStatus: attendance
           ? calculateCheckInStatus(attendance.checkInTime)
@@ -536,6 +632,63 @@ app.post("/report", requireAuth, async (req, res) => {
     }
 
     await report.save();
+
+    // 📝 BẮT ĐẦU GẮN THÔNG BÁO CÓ NÚT BẤM (MAP CHUẨN DATABASE)
+    try {
+      const timeNow = new Date().toLocaleTimeString("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // 1. Hàm hỗ trợ cắt chuỗi (tránh tin nhắn quá dài)
+      const truncate = (text) => {
+        if (!text || text.trim() === "") return "Không có";
+        return text.length > 150 ? text.substring(0, 150) + "..." : text;
+      };
+
+      // 2. Rút trích dữ liệu khớp chính xác 100% với Schema của bạn
+      const prevWork = truncate(req.body.prevWork);
+      const todayWork = truncate(req.body.todayWork);
+      const nextPlan = truncate(req.body.nextPlan);
+      const suggestions = truncate(req.body.suggestions);
+      const notes = truncate(req.body.notes);
+
+      // Xử lý riêng phần trăm hoàn thành (nếu không gửi lên thì mặc định là 0%)
+      const completionRate = req.body.completionRate
+        ? `${req.body.completionRate}%`
+        : "0%";
+
+      // 3. Đếm số lượng file/hình ảnh đính kèm (Lấy từ mảng files trong Schema)
+      const filesArray = req.body.files || [];
+      const fileCountMsg =
+        filesArray.length > 0
+          ? `<b>${filesArray.length} file/hình ảnh</b>`
+          : "Không có";
+
+      // 4. Soạn tin nhắn chuẩn format
+      const msgReport = `
+📝 <b>THÔNG BÁO THÊM BÁO CÁO</b>
+👤 Nhân viên: <b>${req.user.fullName || "Chưa rõ tên"}</b>
+⏰ Thời gian: ${timeNow}
+📅 Ngày: <b>${todayStr}</b>
+───────────────────────
+🔹 <b>Công việc còn lại hôm trước:</b> ${prevWork}
+🔹 <b>Công việc hôm nay:</b> ${todayWork}
+🔹 <b>Tiến độ:</b> ${completionRate}
+🔹 <b>Kế hoạch hôm sau:</b> ${nextPlan}
+🔹 <b>Đề xuất:</b> ${suggestions}
+🔹 <b>Ghi chú:</b> ${notes}
+📎 <b>File đính kèm:</b> ${fileCountMsg}
+    `;
+
+      // 5. Gọi hàm gửi (Lưu ý: Biến 'report' là biến bạn dùng để lưu database: const report = await Report.findOneAndUpdate(...))
+      sendTelegramMessage(msgReport, report._id);
+    } catch (error) {
+      console.error("Lỗi gửi Tele Báo cáo:", error);
+    }
+    // 📝 KẾT THÚC GẮN THÔNG BÁO
+
     res.json({ success: true, message: "Báo cáo đã được lưu thành công!" });
   } catch (err) {
     res
@@ -547,46 +700,143 @@ app.post("/report", requireAuth, async (req, res) => {
 // API Cập nhật báo cáo
 app.put("/report-detail", requireAuth, async (req, res) => {
   try {
-    const reportDate = req.query.date;
+    const reportDate = req.query.date; // Ngày của báo cáo
 
     const report = await Report.findOne({
       userId: req.user.userId,
       date: reportDate,
     });
+
     if (!report)
       return res
         .status(404)
         .json({ success: false, message: "Không tìm thấy báo cáo!" });
 
-    // Chuyển về cùng mốc 0h để so sánh ngày
-    const isPastDay = moment.tz(reportDate, ["YYYY-MM-DD", "DD/MM/YYYY"], "Asia/Ho_Chi_Minh").isBefore(
-      moment.tz("Asia/Ho_Chi_Minh").startOf("day"),
-    );
+    // 1. Lưu lại bản sao dữ liệu cũ trước khi ghi đè
+    const oldReportData = report.toObject();
+
+    const isPastDay = moment
+      .tz(reportDate, ["YYYY-MM-DD", "DD/MM/YYYY"], "Asia/Ho_Chi_Minh")
+      .isBefore(moment.tz("Asia/Ho_Chi_Minh").startOf("day"));
 
     if (isPastDay) {
-      // ĐÃ QUA NGÀY MỚI -> Chỉ cho sửa ghi chú
+      // Đã qua ngày mới -> Chỉ cho sửa ghi chú
       report.notes = req.body.notes;
     } else {
-      // VẪN TRONG NGÀY HÔM NAY -> Cho sửa toàn bộ (dù đã check-out)
+      // 🛑 VALIDATION: Bắt buộc điền 4 trường quan trọng
+      if (!req.body.prevWork || req.body.prevWork.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập Công việc còn lại hôm trước!",
+        });
+      }
+      if (!req.body.todayWork || req.body.todayWork.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập Công việc thực hiện trong ngày!",
+        });
+      }
+      if (
+        req.body.completionRate === undefined ||
+        req.body.completionRate === null ||
+        req.body.completionRate === ""
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập Đánh giá mức hoàn thành (%)!",
+        });
+      }
+      if (!req.body.nextPlan || req.body.nextPlan.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập Kế hoạch công việc ngày mai!",
+        });
+      }
+
+      // Gán dữ liệu mới
       report.prevWork = req.body.prevWork;
       report.todayWork = req.body.todayWork;
       report.completionRate = req.body.completionRate;
       report.nextPlan = req.body.nextPlan;
       report.suggestions = req.body.suggestions;
       report.notes = req.body.notes;
-      // FIX: Cập nhật files nếu có - xử lý các trường hợp null hoặc undefined
-      if (
-        req.body.files &&
-        Array.isArray(req.body.files) &&
-        req.body.files.length > 0
-      ) {
+
+      if (req.body.files && Array.isArray(req.body.files)) {
         report.files = req.body.files;
-      } else if (req.body.files && Array.isArray(req.body.files)) {
-        report.files = [];
       }
     }
 
     await report.save();
+
+    // 🟡 LOGIC THÔNG BÁO CẬP NHẬT
+    try {
+      if (oldReportData) {
+        let changedFields = [];
+        // Lấy thời gian và ngày hiện tại (ngày thực hiện bấm nút cập nhật)
+        const now = moment().tz("Asia/Ho_Chi_Minh");
+        const timeNow = now.format("HH:mm");
+        const updateDate = now.format("DD/MM/YYYY");
+
+        const truncate = (text) => {
+          if (!text || String(text).trim() === "") return "<i>Không có</i>";
+          return text.length > 150 ? text.substring(0, 150) + "..." : text;
+        };
+
+        const fieldsToCheck = [
+          { key: "prevWork", label: "Công việc còn lại hôm trước" },
+          { key: "todayWork", label: "Công việc hôm nay" },
+          { key: "nextPlan", label: "Kế hoạch hôm sau" },
+          { key: "suggestions", label: "Đề xuất" },
+          { key: "notes", label: "Ghi chú" },
+          { key: "completionRate", label: "Tiến độ", isPercent: true },
+        ];
+
+        fieldsToCheck.forEach((f) => {
+          const oldVal =
+            oldReportData[f.key] || (f.key === "completionRate" ? 0 : "");
+          const newVal =
+            req.body[f.key] || (f.key === "completionRate" ? 0 : "");
+
+          if (String(oldVal) !== String(newVal)) {
+            if (f.isPercent) {
+              changedFields.push(`• <b>${f.label}:</b> ${newVal}%`);
+            } else {
+              changedFields.push(`• <b>${f.label}:</b> ${truncate(newVal)}`);
+            }
+          }
+        });
+
+        const oldFilesCount = oldReportData.files
+          ? oldReportData.files.length
+          : 0;
+        const newFilesCount = req.body.files ? req.body.files.length : 0;
+
+        if (oldFilesCount !== newFilesCount) {
+          const fileStatus =
+            newFilesCount > 0 ? `${newFilesCount} file` : "<i>Không có</i>";
+          changedFields.push(`• <b>File đính kèm:</b> ${fileStatus}`);
+        }
+
+        if (changedFields.length > 0) {
+          // FORMAT NỘI DUNG THEO YÊU CẦU MỚI
+          const msgUpdate = `
+🔄 <b>THÔNG BÁO CẬP NHẬT BÁO CÁO</b>
+👤 Nhân viên: <b>${req.user.fullName || req.user.username}</b>
+⏰ Thời gian: ${timeNow} 
+📅 Ngày cập nhật: <b>${updateDate}</b>
+📝 Báo cáo ngày: <b>${reportDate}</b>
+──────────────────────────
+✏️ <b>Nội dung cập nhật:</b>
+${changedFields.join("\n")}
+          `;
+
+          sendTelegramMessage(msgUpdate);
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi gửi Tele Cập nhật Báo cáo:", error);
+    }
+
     res.json({ success: true, message: "Cập nhật báo cáo thành công!" });
   } catch (err) {
     res
@@ -605,7 +855,7 @@ app.get("/api/employees", requireAuth, async (req, res) => {
     }
 
     const employees = await User.find({ role: "user" }).select(
-      "username fullName phone position workingDays dayOff role employeeId",
+      "username fullName phone department position workingDays dayOff role employeeId",
     );
 
     // Add employee ID virtual field to response
@@ -614,6 +864,7 @@ app.get("/api/employees", requireAuth, async (req, res) => {
       username: emp.username,
       fullName: emp.fullName,
       phone: emp.phone,
+      department: emp.department,
       position: emp.position,
       workingDays: emp.workingDays,
       dayOff: emp.dayOff,
@@ -647,12 +898,14 @@ app.get("/api/employee/:id", requireAuth, async (req, res) => {
         username: employee.username,
         fullName: employee.fullName,
         phone: employee.phone,
+        department: employee.department,
         position: employee.position,
         workingDays: employee.workingDays,
         dayOff: employee.dayOff,
         role: employee.role,
         employeeId: employee.employeeId,
         accountStatus: employee.accountStatus,
+        startDate: employee.startDate,
       },
     });
   } catch (err) {
@@ -684,7 +937,7 @@ app.get("/api/employee/:id/status", requireAuth, async (req, res) => {
   }
 });
 
-// API Tạo nhân viên mới
+// API Thêm nhân viên mới
 app.post("/api/employee", requireAuth, async (req, res) => {
   try {
     if (req.user.role !== "admin") {
@@ -696,17 +949,28 @@ app.post("/api/employee", requireAuth, async (req, res) => {
       password,
       fullName,
       phone,
+      department,
       position,
       workingDays,
       dayOff,
       role,
+      startDate,
     } = req.body;
 
     // Validation
-    if (!username || !password || !fullName || !phone || !position) {
+    if (
+      !username ||
+      !password ||
+      !fullName ||
+      !phone ||
+      !department ||
+      !position ||
+      !startDate
+    ) {
       return res.json({
         success: false,
-        message: "Vui lòng điền đầy đủ thông tin bắt buộc",
+        message:
+          "Vui lòng điền đầy đủ thông tin bắt buộc (bao gồm phòng ban, vị trí, ngày bắt đầu làm)",
       });
     }
 
@@ -724,10 +988,12 @@ app.post("/api/employee", requireAuth, async (req, res) => {
       password,
       fullName,
       phone,
+      department,
       position,
       workingDays: workingDays || 0,
       dayOff: dayOff || 0,
       role: role || "user",
+      startDate: startDate, // Format: DD/MM/YYYY
     });
 
     res.json({
@@ -747,8 +1013,17 @@ app.put("/api/employee/:id", requireAuth, async (req, res) => {
       return res.status(403).json({ success: false, message: "Admin only" });
     }
 
-    const { password, fullName, phone, position, workingDays, dayOff, role } =
-      req.body;
+    const {
+      password,
+      fullName,
+      phone,
+      department,
+      position,
+      workingDays,
+      dayOff,
+      role,
+      startDate,
+    } = req.body;
 
     const employee = await User.findById(req.params.id);
     if (!employee) {
@@ -759,10 +1034,12 @@ app.put("/api/employee/:id", requireAuth, async (req, res) => {
     if (password) employee.password = password;
     if (fullName) employee.fullName = fullName;
     if (phone) employee.phone = phone;
+    if (department) employee.department = department;
     if (position) employee.position = position;
     if (workingDays !== undefined) employee.workingDays = workingDays;
     if (dayOff !== undefined) employee.dayOff = dayOff;
     if (role) employee.role = role;
+    if (startDate) employee.startDate = startDate;
 
     await employee.save();
 
@@ -876,11 +1153,15 @@ app.get("/api/employee/:id/reports", async (req, res) => {
         date: r.date,
         checkInTime:
           attendance && attendance.checkInTime
-            ? moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh").format("HH:mm")
+            ? moment
+                .tz(attendance.checkInTime, "Asia/Ho_Chi_Minh")
+                .format("HH:mm")
             : "--:--",
         checkOutTime:
           attendance && attendance.checkOutTime
-            ? moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh").format("HH:mm")
+            ? moment
+                .tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
+                .format("HH:mm")
             : "--:--",
         checkInStatus: attendance
           ? calculateCheckInStatus(attendance.checkInTime)
@@ -893,8 +1174,13 @@ app.get("/api/employee/:id/reports", async (req, res) => {
           : "--:--",
         totalHours:
           attendance && attendance.checkOutTime && attendance.checkInTime
-            ? moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
-                .diff(moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh"), "hours", true)
+            ? moment
+                .tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
+                .diff(
+                  moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh"),
+                  "hours",
+                  true,
+                )
                 .toFixed(1)
             : 0,
       };
@@ -992,8 +1278,13 @@ app.get("/api/employee/:id/report", async (req, res) => {
 
     let totalHours = 0;
     if (attendance && attendance.checkInTime && attendance.checkOutTime) {
-      totalHours = moment.tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
-        .diff(moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh"), "hours", true)
+      totalHours = moment
+        .tz(attendance.checkOutTime, "Asia/Ho_Chi_Minh")
+        .diff(
+          moment.tz(attendance.checkInTime, "Asia/Ho_Chi_Minh"),
+          "hours",
+          true,
+        )
         .toFixed(1);
     }
 

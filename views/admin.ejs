@@ -44,7 +44,7 @@
             <input
               type="text"
               id="searchInput"
-              placeholder="Tìm kiếm theo mã nhân viên hoặc tên..."
+              placeholder="Tìm kiếm theo tên nhân viên hoặc tài khoản..."
               onkeyup="filterEmployees()"
             />
           </div>
@@ -52,7 +52,7 @@
             <table class="employee-table" id="employeeTable">
               <thead>
                 <tr>
-                  <th>Mã Nhân Viên</th>
+                  <th>Mã NV</th>
                   <th>Họ và Tên</th>
                   <th>Vị Trí</th>
                   <th>Số Ngày Làm</th>
@@ -113,16 +113,8 @@
                 THÔNG TIN CÁ NHÂN
               </h4>
 
+              <!-- Dòng 1: Họ và tên + Số điện thoại -->
               <div class="form-grid">
-                <div class="form-group">
-                  <label>Mã Nhân Viên</label>
-                  <input
-                    type="text"
-                    id="employeeId"
-                    placeholder="Tự động sinh"
-                    readonly
-                  />
-                </div>
                 <div class="form-group">
                   <label>Họ và Tên *</label>
                   <input
@@ -132,9 +124,6 @@
                     required
                   />
                 </div>
-              </div>
-
-              <div class="form-grid">
                 <div class="form-group">
                   <label>Số Điện Thoại *</label>
                   <input
@@ -144,39 +133,112 @@
                     required
                   />
                 </div>
+              </div>
+
+              <!-- Add: Phòng ban + Vị Trí -->
+              <div id="addModeRow2" class="form-grid">
+                <div class="form-group">
+                  <label>Phòng Ban *</label>
+                  <select id="department" required>
+                    <option value="">-- Chọn phòng ban --</option>
+                    <option value="R&D">Khối Nghiên cứu & Phát triển (R&D)</option>
+                  </select>
+                </div>
                 <div class="form-group">
                   <label>Vị Trí *</label>
+                  <select id="position" required>
+                    <option value="">-- Chọn vị trí --</option>
+                    <option value="Giám đốc công nghệ">Giám đốc công nghệ</option>
+                    <option value="Team leader">Team leader</option>
+                    <option value="Kỹ sư điện tử">Kỹ sư điện tử</option>
+                    <option value="Kỹ sư phần mềm">Kỹ sư phần mềm</option>
+                    <option value="Sinh viên điện tử (Thực tập)">Sinh viên điện tử (Thực tập)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Add: Ngày bắt đầu làm (1 cột) -->
+              <div id="addModeRow3" class="form-grid" style="grid-template-columns: 1fr;">
+                <div class="form-group">
+                  <label>Ngày Bắt Đầu Làm *</label>
                   <input
-                    type="text"
-                    id="position"
-                    placeholder="Nhập vị trí công việc"
+                    type="date"
+                    id="startDate"
+                    placeholder="Chọn ngày bắt đầu làm"
                     required
                   />
                 </div>
               </div>
 
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Số Ngày Làm *</label>
-                  <input
-                    type="number"
-                    id="workingDays"
-                    placeholder="Nhập số ngày làm"
-                    value="0"
-                    readonly
-                    required
-                  />
+              <!-- Edit-only fields (ẩn khi Add, hiển thị khi Edit) -->
+              <div id="editOnlyFields" style="display: none;">
+                <!-- Edit: Phòng ban + Vị Trí -->
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Phòng Ban *</label>
+                    <select id="departmentEdit" required>
+                      <option value="">-- Chọn phòng ban --</option>
+                      <option value="R&D">Khối Nghiên cứu & Phát triển (R&D)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Vị Trí *</label>
+                    <select id="positionEdit" required>
+                      <option value="">-- Chọn vị trí --</option>
+                      <option value="Giám đốc công nghệ">Giám đốc công nghệ</option>
+                      <option value="Team leader">Team leader</option>
+                      <option value="Kỹ sư điện tử">Kỹ sư điện tử</option>
+                      <option value="Kỹ sư phần mềm">Kỹ sư phần mềm</option>
+                      <option value="Sinh viên điện tử (Thực tập)">Sinh viên điện tử (Thực tập)</option>
+                    </select>
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label>Số Ngày Nghỉ *</label>
-                  <input
-                    type="number"
-                    id="dayOff"
-                    placeholder="Nhập số ngày nghỉ"
-                    value="0"
-                    readonly
-                    required
-                  />
+
+                <!-- Edit: Ngày bắt đầu làm + Mã nhân viên -->
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Ngày Bắt Đầu Làm *</label>
+                    <input
+                      type="date"
+                      id="startDateEdit"
+                      placeholder="Chọn ngày bắt đầu làm"
+                      readonly
+                      style="background-color: #ecf0f1; cursor: not-allowed;"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>Mã Nhân Viên</label>
+                    <input
+                      type="text"
+                      id="employeeId"
+                      readonly
+                      style="background-color: #ecf0f1; cursor: not-allowed;"
+                    />
+                  </div>
+                </div>
+
+                <!-- Dòng 4 (Edit): Số ngày làm + Số ngày nghỉ -->
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Số Ngày Làm</label>
+                    <input
+                      type="number"
+                      id="workingDays"
+                      value="0"
+                      readonly
+                      style="background-color: #ecf0f1; cursor: not-allowed;"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>Số Ngày Nghỉ</label>
+                    <input
+                      type="number"
+                      id="dayOff"
+                      value="0"
+                      readonly
+                      style="background-color: #ecf0f1; cursor: not-allowed;"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -223,6 +285,7 @@
                     id="accountStatus"
                     value="Hoạt động"
                     readonly
+                    style="background-color: #ecf0f1; cursor: not-allowed;"
                   />
                 </div>
               </div>

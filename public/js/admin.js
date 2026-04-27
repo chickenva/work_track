@@ -146,46 +146,21 @@ style.textContent = `
 document.head.appendChild(style);
 
 let allEmployees = [];
-let editingEmployeeId = null;
-
-// Generate employee ID from fullName and phone
-function generateEmployeeId(fullName, phone) {
-  if (!fullName || !phone) return "";
-  const lastNamePart = fullName.trim().split(" ").pop();
-  const lastThreeDigits = phone.slice(-3);
-  return (lastNamePart + lastThreeDigits).toLowerCase();
-}
-
-// Update employee ID field
-function updateEmployeeId() {
-  const fullName = document.getElementById("fullName").value;
-  const phone = document.getElementById("phone").value;
-  const employeeIdField = document.getElementById("employeeId");
-  employeeIdField.value = generateEmployeeId(fullName, phone);
-}
 
 // Tìm kiếm nhân viên
 function filterEmployees() {
   const searchText = document.getElementById("searchInput").value.toLowerCase();
   const filtered = allEmployees.filter(
     (emp) =>
-      emp.employeeId.toLowerCase().includes(searchText) ||
-      emp.fullName.toLowerCase().includes(searchText),
+      emp.fullName.toLowerCase().includes(searchText) ||
+      emp.username.toLowerCase().includes(searchText),
   );
   renderEmployeeTable(filtered);
 }
 
-// Setup event listeners for auto-generation
+// Setup event listeners
 document.addEventListener("DOMContentLoaded", function () {
-  const fullNameField = document.getElementById("fullName");
-  const phoneField = document.getElementById("phone");
-
-  if (fullNameField) {
-    fullNameField.addEventListener("input", updateEmployeeId);
-  }
-  if (phoneField) {
-    phoneField.addEventListener("input", updateEmployeeId);
-  }
+  // Event listeners for other purposes
 });
 
 // Chuyển đổi tab
@@ -219,7 +194,7 @@ function renderEmployeeTable(employees) {
 
   if (employees.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="empty-message">Không có nhân viên nào</td></tr>';
+      '<tr><td colspan="6" class="empty-message">Không có nhân viên nào</td></tr>';
     return;
   }
 
@@ -227,7 +202,7 @@ function renderEmployeeTable(employees) {
     .map(
       (emp) => `
           <tr>
-            <td><strong>${emp.employeeId}</strong></td>
+            <td class="fw-bold">${emp.employeeId || "-"}</td>
             <td>${emp.fullName}</td>
             <td>${emp.position}</td>
             <td>${emp.workingDays}</td>
@@ -303,8 +278,10 @@ function viewEmployeeDetail(employeeId) {
   viewEmployeeDetailTab(employeeId);
 }
 
+let editingEmployeeId = null;
 // Chỉnh sửa nhân viên
 function editEmployee(employeeId) {
+  editingEmployeeId = employeeId; // Lưu ID nhân viên đang chỉnh sửa để sử dụng trong submitEmployeeForm()
   fetch(`/api/employee/${employeeId}`)
     .then((res) => res.json())
     .then((data) => {
@@ -319,11 +296,33 @@ function editEmployee(employeeId) {
         document.getElementById("fullName").value = emp.fullName;
         document.getElementById("phone").value = emp.phone;
         document.getElementById("position").value = emp.position;
+        // Also set position for edit mode
+        if (document.getElementById("positionEdit")) {
+          document.getElementById("positionEdit").value = emp.position;
+        }
+        // Set department
+        if (emp.department) {
+          document.getElementById("department").value = emp.department;
+          if (document.getElementById("departmentEdit")) {
+            document.getElementById("departmentEdit").value = emp.department;
+          }
+        }
         document.getElementById("workingDays").value = emp.workingDays;
         document.getElementById("workingDays").readOnly = true;
         document.getElementById("dayOff").value = emp.dayOff;
         document.getElementById("dayOff").readOnly = true;
         document.getElementById("role").value = emp.role;
+
+        // Set startDate (convert DD/MM/YYYY to YYYY-MM-DD for HTML date input)
+        if (emp.startDate) {
+          const parts = emp.startDate.split("/");
+          const htmlDateFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          document.getElementById("startDate").value = htmlDateFormat;
+          // Also set startDate for edit mode
+          if (document.getElementById("startDateEdit")) {
+            document.getElementById("startDateEdit").value = htmlDateFormat;
+          }
+        }
 
         // Set account status
         const statusMap = {
@@ -342,6 +341,13 @@ function editEmployee(employeeId) {
         document.getElementById("submitBtn").style.minWidth = "auto";
         document.getElementById("cancelEditBtn").style.display = "block";
         document.getElementById("resetBtn").style.display = "none";
+
+        // Show edit-only fields (mã nhân viên, số ngày làm, số ngày nghỉ)
+        // Hide add mode rows (addModeRow2 and addModeRow3)
+        document.getElementById("addModeRow2").style.display = "none";
+        document.getElementById("addModeRow3").style.display = "none";
+        // Show edit mode fields
+        document.getElementById("editOnlyFields").style.display = "block";
 
         // Show lock/unlock and delete buttons
         document.getElementById("lockBtn").style.display = "block";
@@ -368,14 +374,48 @@ function submitEmployeeForm() {
   const password = document.getElementById("password").value;
   const fullName = document.getElementById("fullName").value;
   const phone = document.getElementById("phone").value;
-  const position = document.getElementById("position").value;
+
+  // Get department from the appropriate field based on mode
+  const departmentField =
+    editingEmployeeId && document.getElementById("departmentEdit")
+      ? document.getElementById("departmentEdit")
+      : document.getElementById("department");
+  const department = departmentField.value;
+
+  // Get position from the appropriate field based on mode
+  const positionField =
+    editingEmployeeId && document.getElementById("positionEdit")
+      ? document.getElementById("positionEdit")
+      : document.getElementById("position");
+  const position = positionField.value;
+
+  // Get startDate from the appropriate field based on mode
+  const startDateField =
+    editingEmployeeId && document.getElementById("startDateEdit")
+      ? document.getElementById("startDateEdit")
+      : document.getElementById("startDate");
+  const startDateInput = startDateField.value;
+
   const workingDays = parseInt(document.getElementById("workingDays").value);
   const dayOff = parseInt(document.getElementById("dayOff").value);
   const role = document.getElementById("role").value;
 
-  if (!username || !fullName || !phone || !position) {
+  if (!username || !fullName || !phone || !department || !position) {
     showToast("Vui lòng điền đầy đủ thông tin bắt buộc!", "warning");
     return;
+  }
+
+  // Validate startDate
+  if (!startDateInput) {
+    showToast("Vui lòng chọn ngày bắt đầu làm!", "warning");
+    return;
+  }
+
+  // Convert HTML date format (YYYY-MM-DD) to DD/MM/YYYY
+  let startDate = "";
+  if (startDateInput) {
+    const parts = startDateInput.split("-");
+    startDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
 
   if (editingEmployeeId) {
@@ -383,7 +423,9 @@ function submitEmployeeForm() {
     const updateData = {
       fullName,
       phone,
+      department,
       position,
+      startDate,
       role,
     };
 
@@ -428,10 +470,12 @@ function submitEmployeeForm() {
         password,
         fullName,
         phone,
+        department,
         position,
         workingDays,
         dayOff,
         role,
+        startDate,
       }),
     })
       .then((res) => res.json())
@@ -461,13 +505,28 @@ function resetEmployeeForm() {
   document.getElementById("password").value = "";
   document.getElementById("password").required = true;
   document.getElementById("employeeId").value = "";
+  document.getElementById("department").value = "R&D"; // Set default department
   document.getElementById("workingDays").value = "0";
   document.getElementById("workingDays").readOnly = true;
   document.getElementById("dayOff").value = "0";
   document.getElementById("dayOff").readOnly = true;
   document.getElementById("accountStatus").value = "Hoạt động";
+
+  // Set startDate to today by default
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  document.getElementById("startDate").value = `${year}-${month}-${day}`;
+
   document.getElementById("formTitle").textContent = "THÊM NHÂN VIÊN MỚI";
   editingEmployeeId = null;
+
+  // Hide edit-only fields (mã nhân viên, số ngày làm, số ngày nghỉ)
+  // Show add mode rows (addModeRow2 and addModeRow3)
+  document.getElementById("addModeRow2").style.display = "grid";
+  document.getElementById("addModeRow3").style.display = "grid";
+  document.getElementById("editOnlyFields").style.display = "none";
 
   // Show add mode buttons
   document.getElementById("submitBtn").textContent = "THÊM NHÂN VIÊN";
@@ -926,7 +985,7 @@ function toggleLockEmployee() {
   });
 }
 
-// Delete employee account
+// Xóa tài khoản nhân viên
 function deleteEmployee() {
   if (!editingEmployeeId) {
     showToast("Không tìm thấy ID nhân viên!", "error");

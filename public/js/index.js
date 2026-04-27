@@ -287,16 +287,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCheckin = document.getElementById("btn-checkin-top");
   const btnCheckout = document.getElementById("btn-checkout");
 
-  function updateClock() {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const timeStr = now.toLocaleTimeString("vi-VN", { hour12: false });
-    const dateStr = now.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
+  // Lưu offset thời gian giữa server và browser (milliseconds)
+  let serverTimeOffset = 0;
+  let lastServerTime = 0;
+  let lastBrowserTime = 0;
+
+  // Fetch thời gian server lần đầu tiên
+  fetch("/api/current-time")
+    .then((res) => res.json())
+    .then((data) => {
+      lastServerTime = data.timestamp; // Thời gian server (ms)
+      lastBrowserTime = new Date().getTime(); // Thời gian browser (ms)
+      serverTimeOffset = lastServerTime - lastBrowserTime;
+      console.log(`✓ Server time synchronized. Offset: ${serverTimeOffset}ms`);
+    })
+    .catch((err) => {
+      console.error("Failed to sync server time:", err);
     });
+
+  function updateClock() {
+    // Tính thời gian server dựa trên offset
+    const now = new Date();
+    const serverTime = new Date(now.getTime() + serverTimeOffset);
+
+    const hours = String(serverTime.getHours()).padStart(2, "0");
+    const minutes = String(serverTime.getMinutes()).padStart(2, "0");
+    const seconds = String(serverTime.getSeconds()).padStart(2, "0");
+    const day = String(serverTime.getDate()).padStart(2, "0");
+    const month = String(serverTime.getMonth() + 1).padStart(2, "0");
+    const year = serverTime.getFullYear();
+
+    const timeStr = `${hours}:${minutes}:${seconds}`;
+    const dateStr = `${day}/${month}/${year}`;
+
     const clockElement = document.getElementById("live-clock");
 
     if (clockElement) {
@@ -360,7 +383,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Cập nhật đồng hồ mỗi giây
   setInterval(updateClock, 1000);
+
+  // Re-sync với server mỗi 1 phút để tránh drift
+  setInterval(() => {
+    fetch("/api/current-time")
+      .then((res) => res.json())
+      .then((data) => {
+        lastServerTime = data.timestamp;
+        lastBrowserTime = new Date().getTime();
+        serverTimeOffset = lastServerTime - lastBrowserTime;
+      })
+      .catch((err) => {
+        console.warn("Failed to re-sync server time:", err);
+      });
+  }, 60000); // 60 seconds
+
   updateClock();
 });
 
@@ -494,7 +533,10 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .then((data) => {
             if (data.success) {
-              showToast("Check-out thành công!", "success");
+              showToast(
+                "Check-out thành công! Đang tự động đăng xuất...",
+                "success",
+              );
 
               // Cập nhật giao diện lập tức trước khi reload
               const btnCheckout = document.getElementById("btn-checkout");
@@ -510,8 +552,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 statusText.innerText = "Đã check-out";
               }
 
-              // Đợi 2 giây cho user đọc Toast rồi reload trang
-              setTimeout(() => window.location.reload(), 2000);
+              // Đợi 2 giây cho user đọc Toast rồi redirect về trang login
+              setTimeout(() => (window.location.href = "/login"), 3000);
             } else {
               showToast(
                 "Lỗi: " + (data.message || "Check-out thất bại"),
